@@ -104,22 +104,27 @@ func moduleName(m *Module) string {
 	return "_missingName"
 }
 
-func (p *printer) printHeader() {
-	moduleTypesSet := make(map[string]bool)
-	for _, def := range p.defs {
+func GetModulesInfo(defs []Definition, infoFun func(m *Module) string) []string {
+	moduleInfoSet := make(map[string]bool)
+	for _, def := range defs {
 		if m, ok := def.(*Module); ok {
-			moduleTypesSet[m.Type] = true
+			moduleInfoSet[infoFun(m)] = true
 		}
 	}
 
-	moduleTypes := make([]string, len(moduleTypesSet))
+	moduleInfo := make([]string, len(moduleInfoSet))
 	i := 0
-	for v := range moduleTypesSet {
-		moduleTypes[i] = v
+	for v := range moduleInfoSet {
+		moduleInfo[i] = v
 		i++
 	}
 
-	sort.Strings(moduleTypes)
+	sort.Strings(moduleInfo)
+	return moduleInfo
+}
+
+func (p *printer) printHeader() {
+	moduleTypes := GetModulesInfo(p.defs, func(m *Module) string { return m.Type })
 	var header string
 	if len(moduleTypes) > 0 {
 		header = "{ " + strings.Join(moduleTypes, ", ") + " }:\nlet\n\n"
@@ -130,27 +135,7 @@ func (p *printer) printHeader() {
 }
 
 func (p *printer) printFooter() {
-	moduleNamesSet := make(map[string]bool)
-	for _, def := range p.defs {
-		if m, ok := def.(*Module); ok {
-			n := moduleName(m)
-			moduleNamesSet[n] = true
-		}
-	}
-
-	moduleNames := make([]string, len(moduleNamesSet))
-	i := 0
-	for v := range moduleNamesSet {
-		if isValidNixIdentifier(v) {
-			moduleNames[i] = v
-		} else {
-			moduleNames[i] = "\"" + v + "\""
-		}
-		i++
-	}
-
-	sort.Strings(moduleNames)
-
+	moduleNames := GetModulesInfo(p.defs, moduleName)
 	var footer string
 	if len(moduleNames) > 0 {
 		footer = "\nin { inherit " + strings.Join(moduleNames, " ") + "; }\n"
