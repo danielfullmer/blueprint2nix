@@ -19,7 +19,6 @@ package main
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -88,16 +87,15 @@ func (p *printer) Print() ([]byte, error) {
 	return p.output, nil
 }
 
-func isValidNixIdentifier(name string) bool {
-	matched, _ := regexp.MatchString("[a-zA-Z_][a-zA-Z0-9_'-]*", name)
-	return matched
-}
-
-func moduleName(m *Module) string {
+func ModuleName(m *Module) string {
 	for _, p := range m.Properties {
 		if p.Name == "name" && p.Value.Type() == StringType {
 			s := p.Value.(*String)
-			return s.Value
+			if IsValidNixIdentifier(s.Value) {
+				return s.Value
+			} else {
+				return "\"" + s.Value + "\""
+			}
 		}
 	}
 
@@ -135,7 +133,7 @@ func (p *printer) printHeader() {
 }
 
 func (p *printer) printFooter() {
-	moduleNames := GetModulesInfo(p.defs, moduleName)
+	moduleNames := GetModulesInfo(p.defs, ModuleName)
 	var footer string
 	if len(moduleNames) > 0 {
 		footer = "\nin { inherit " + strings.Join(moduleNames, " ") + "; }\n"
@@ -166,7 +164,7 @@ func (p *printer) printAssignment(assignment *Assignment) {
 }
 
 func (p *printer) printModule(module *Module) {
-	p.printToken(moduleName(module), module.TypePos)
+	p.printToken(ModuleName(module), module.TypePos)
 	p.requestSpace()
 	p.printToken("=", noPos)
 	p.requestSpace()
@@ -411,7 +409,7 @@ func (p *printer) printComment(cg *CommentGroup) {
 			p.requestSpace()
 		}
 		for i, line := range comment.Comment {
-			if line[0:2] == "//" {
+			if len(line) >= 2 && line[0:2] == "//" {
 				line = "# " + line[2:]
 			}
 
