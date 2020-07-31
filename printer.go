@@ -1,4 +1,4 @@
-// This is a modified version of github/google/blueprint/parser for blueprint2nix
+// This is a modified version of github.com/google/blueprint/parser for blueprint2nix
 // Originally from revision: ba1ea7583953186a1a5519c0cd1087e403ad516f
 
 // Copyright 2014 Google Inc. All rights reserved.
