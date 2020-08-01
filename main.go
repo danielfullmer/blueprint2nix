@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/google/blueprint"
@@ -90,24 +91,39 @@ func processDir(rootdir string) {
 	}()
 
 	moduleNamesMap := make(map[string][]string)
+	moduleNamesSet := make(map[string]bool)
+	fileNames := make([]string, 0)
 loop:
 	for {
 		select {
 		case m := <-moduleNamesCh:
+			// check for duplicated names
+			for _, name := range m.moduleNames {
+				if _, ok := moduleNamesSet[name]; ok {
+					fmt.Fprintln(os.Stderr, "Duplicate assigned name", name, "in", m.fileName, "skipping file")
+					continue loop
+				} else {
+					moduleNamesSet[name] = true
+				}
+			}
+
+			fileNames = append(fileNames, m.fileName)
+			sort.Strings(m.moduleNames)
 			moduleNamesMap[m.fileName] = m.moduleNames
 		case <-doneCh:
 			break loop
 		}
 	}
+	sort.Strings(fileNames)
 
 	fmt.Println("Writing blueprint-packages.nix")
 	f, _ := os.Create("out/blueprint-packages.nix")
 	f.WriteString("{ callBPPackage }:\n")
 	f.WriteString("{\n")
-	// TODO: Sort this by module name for consistency
-	for path, names := range moduleNamesMap {
+	for _, fileName := range fileNames {
+		names := moduleNamesMap[fileName]
 		if len(names) > 0 {
-			f.WriteString("  inherit (callBPPackage ./" + path + " {})\n")
+			f.WriteString("  inherit (callBPPackage ./" + fileName + " {})\n")
 			f.WriteString("    ")
 			f.WriteString(strings.Join(names, " "))
 			f.WriteString(";\n\n")
