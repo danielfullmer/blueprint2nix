@@ -38,6 +38,13 @@ func convertFile(inpath string, outpath string) []string {
 	return GetModulesInfo(file.Defs, ModuleName)
 }
 
+func nixFilePath(inpath string) string {
+	outpath := strings.ReplaceAll(inpath, "/", "_")
+	outpath = strings.TrimSuffix(outpath, ".bp")
+	outpath += ".nix"
+	return outpath
+}
+
 // See ParseFileList for reference
 func processDir(rootdir string) {
 	// Could probably use something faster from soong
@@ -71,13 +78,10 @@ func processDir(rootdir string) {
 		fmt.Println("Converting", file.Name)
 		nixCode, _ := NixPrint(file)
 
-		outpath := strings.ReplaceAll(file.Name, "/", "_")
-		outpath = strings.TrimSuffix(outpath, ".bp")
-		outpath += ".nix"
-		ioutil.WriteFile("out/"+outpath, nixCode, 0644)
+		ioutil.WriteFile("out/"+nixFilePath(file.Name), nixCode, 0644)
 
 		moduleNamesCh <- moduleNamePair{
-			fileName:    outpath,
+			fileName:    file.Name,
 			moduleNames: GetModulesInfo(file.Defs, ModuleName),
 		}
 	}
@@ -123,7 +127,7 @@ loop:
 	for _, fileName := range fileNames {
 		names := moduleNamesMap[fileName]
 		if len(names) > 0 {
-			f.WriteString("  inherit (callBPPackage ./" + fileName + " {})\n")
+			f.WriteString("  inherit (callBPPackage \"" + filepath.Dir(fileName) + "\" ./" + nixFilePath(fileName) + " {})\n")
 			f.WriteString("    ")
 			f.WriteString(strings.Join(names, " "))
 			f.WriteString(";\n\n")
