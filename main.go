@@ -145,6 +145,7 @@ func main() {
 		case err != nil:
 			fmt.Fprintln(os.Stderr, err)
 		case dir.IsDir():
+			os.MkdirAll("out", 0755);
 			processDir(path)
 		default:
 			fmt.Println("Converting", path)
