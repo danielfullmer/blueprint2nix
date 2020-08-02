@@ -40,7 +40,7 @@ func convertFile(inpath string, outpath string) []string {
 
 func nixFilePath(inpath string) string {
 	outpath := strings.ReplaceAll(inpath, "/", "_")
-	outpath = strings.TrimSuffix(outpath, ".bp")
+	outpath = strings.TrimSuffix(outpath, "_Android.bp")
 	outpath += ".nix"
 	return outpath
 }
