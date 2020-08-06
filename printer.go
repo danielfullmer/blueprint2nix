@@ -306,6 +306,11 @@ func (p *printer) printProperty(property *Property) {
 // Print a single token, including any necessary comments or whitespace between
 // this token and the previously printed token
 func (p *printer) printToken(s string, pos scanner.Position) {
+	// "in" is a Nix keyword
+	if s == "in" {
+		s = "in_"
+	}
+
 	newline := p.pendingNewline != 0
 
 	if pos == noPos {
