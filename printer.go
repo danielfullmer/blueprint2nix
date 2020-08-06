@@ -208,7 +208,14 @@ func (p *printer) printList(list []Expression, pos, endPos scanner.Position) {
 		p.requestNewline()
 		p.indent(p.curIndent() + 4)
 		for _, value := range list {
-			p.printExpression(value)
+			switch value.(type) {
+			case *Operator:
+				p.printToken("(", noPos)
+				p.printExpression(value)
+				p.printToken(")", noPos)
+			default:
+				p.printExpression(value)
+			}
 			p.requestNewline()
 		}
 		p.unindent(endPos)
