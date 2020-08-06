@@ -196,7 +196,9 @@ func (p *printer) printExpression(value Expression) {
 	case *Int64:
 		p.printToken(strconv.FormatInt(v.Value, 10), v.LiteralPos)
 	case *String:
-		p.printToken(strconv.Quote(v.Value), v.LiteralPos)
+		s := strconv.Quote(v.Value)
+		s = strings.ReplaceAll(s, "${", "\\${")
+		p.printToken(s, v.LiteralPos)
 	case *List:
 		p.printList(v.Values, v.LBracePos, v.RBracePos)
 	case *Map:
