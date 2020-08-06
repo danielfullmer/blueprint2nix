@@ -106,7 +106,9 @@ func GetModulesInfo(defs []Definition, infoFun func(m *Module) string) []string 
 	moduleInfoSet := make(map[string]bool)
 	for _, def := range defs {
 		if m, ok := def.(*Module); ok {
-			moduleInfoSet[infoFun(m)] = true
+			if !strings.Contains(m.Type, "ndk_") {
+				moduleInfoSet[infoFun(m)] = true
+			}
 		}
 	}
 
@@ -147,7 +149,10 @@ func (p *printer) printDef(def Definition) {
 	if assignment, ok := def.(*Assignment); ok {
 		p.printAssignment(assignment)
 	} else if module, ok := def.(*Module); ok {
-		p.printModule(module)
+		// NDK libraries duplicate module names. Skip for now.
+		if !strings.Contains(module.Type, "ndk_") {
+			p.printModule(module)
+		}
 	} else {
 		panic("Unknown definition")
 	}
