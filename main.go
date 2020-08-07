@@ -75,7 +75,6 @@ func processDir(rootdir string) {
 
 	moduleNamesCh := make(chan moduleNamePair)
 	fileHandler := func(file *parser.File) {
-		fmt.Println("Converting", file.Name)
 		nixCode, _ := NixPrint(file)
 
 		ioutil.WriteFile("out/"+nixFilePath(file.Name), nixCode, 0644)
@@ -102,18 +101,21 @@ loop:
 		select {
 		case m := <-moduleNamesCh:
 			// check for duplicated names
+			uniqueNames := make([]string, 0)
 			for _, name := range m.moduleNames {
 				if _, ok := moduleNamesSet[name]; ok {
-					fmt.Fprintln(os.Stderr, "Duplicate assigned name", name, "in", m.fileName, "skipping file")
-					continue loop
+					fmt.Fprintln(os.Stderr, "Duplicate assigned name", name, "in", m.fileName)
 				} else {
 					moduleNamesSet[name] = true
+					uniqueNames = append(uniqueNames, name)
 				}
 			}
 
-			fileNames = append(fileNames, m.fileName)
-			sort.Strings(m.moduleNames)
-			moduleNamesMap[m.fileName] = m.moduleNames
+			if len(uniqueNames) > 0 {
+				fileNames = append(fileNames, m.fileName)
+				sort.Strings(uniqueNames)
+				moduleNamesMap[m.fileName] = uniqueNames
+			}
 		case <-doneCh:
 			break loop
 		}
