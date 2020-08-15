@@ -13,11 +13,65 @@ import (
 
 	"github.com/google/blueprint"
 	"github.com/google/blueprint/parser"
+	"github.com/google/blueprint/pathtools"
 )
 
 func IsValidNixIdentifier(name string) bool {
 	matched, _ := regexp.MatchString("^[a-zA-Z_][a-zA-Z0-9_'-]*$", name)
 	return matched
+}
+
+// Expand globs in srcs = [ ... ] of modules.
+// TODO: Follow parse tree if "srcs" is not a list of literals but rather an expression
+// TODO: Add a test here
+func expandModuleSrcGlobs(rootdir string, file *parser.File) {
+	for _, def := range file.Defs {
+		if m, ok := def.(*parser.Module); ok {
+			for _, prop := range m.Properties {
+				if strings.HasSuffix(prop.Name, "srcs") || strings.HasSuffix(prop.Name, "dirs") || strings.HasSuffix(prop.Name, "data") || strings.HasSuffix(prop.Name, "files") {
+					if l, ok := prop.Value.(*parser.List); ok {
+						basepath := filepath.Join(rootdir, filepath.Dir(file.Name))
+						expandListSrcGlobs(basepath, l)
+					}
+				}
+			}
+		}
+	}
+}
+
+func expandListSrcGlobs(basepath string, l *parser.List) {
+	newElements := make([]parser.Expression, 0)
+	for _, v := range l.Values {
+		if s, ok := v.(*parser.String); ok {
+			if strings.Contains(s.Value, "*") {
+				path := filepath.Join(basepath, s.Value)
+				matches, _, _ := pathtools.Glob(path, []string{}, pathtools.FollowSymlinks)
+
+				//if len(matches) == 0 {
+				//	fmt.Println("No glob matches found for", path)
+				//}
+
+				for i, match := range matches {
+					match = match[len(basepath)+1:]
+
+					q := &parser.String{}
+					q.Value = match
+					if i == 0 {
+						q.LiteralPos = s.LiteralPos
+					} else {
+						q.LiteralPos = noPos
+					}
+
+					newElements = append(newElements, q)
+				}
+			} else {
+				newElements = append(newElements, v)
+			}
+		} else {
+			newElements = append(newElements, v)
+		}
+	}
+	l.Values = newElements
 }
 
 func convertFile(inpath string, outpath string) []string {
@@ -31,6 +85,7 @@ func convertFile(inpath string, outpath string) []string {
 		panic("file doesnt parse")
 	}
 
+	expandModuleSrcGlobs("", file)
 	out, _ := NixPrint(file)
 
 	ioutil.WriteFile(outpath, out, 0644)
@@ -75,6 +130,7 @@ func processDir(rootdir string) {
 
 	moduleNamesCh := make(chan moduleNamePair)
 	fileHandler := func(file *parser.File) {
+		expandModuleSrcGlobs(rootdir, file)
 		nixCode, _ := NixPrint(file)
 
 		ioutil.WriteFile("out/"+nixFilePath(file.Name), nixCode, 0644)
