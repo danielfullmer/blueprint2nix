@@ -111,9 +111,6 @@ func processDir(rootdir string) {
 			if strings.Contains(path, "device/") {
 				return nil
 			}
-			if strings.Contains(path, "hardware/") {
-				return nil
-			}
 			if strings.Contains(path, "prebuilts/vndk/") {
 				return nil
 			}
