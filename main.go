@@ -156,6 +156,10 @@ loop:
 			// check for duplicated names
 			uniqueNames := make([]string, 0)
 			for _, name := range m.moduleNames {
+				if strings.HasPrefix(name, "_bp2nix_") {
+					name = name[len("_bp2nix_"):]
+				}
+
 				if _, ok := moduleNamesSet[name]; ok {
 					fmt.Fprintln(os.Stderr, "Duplicate assigned name", name, "in", m.fileName)
 				} else {

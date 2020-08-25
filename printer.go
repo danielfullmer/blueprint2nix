@@ -91,10 +91,19 @@ func ModuleName(m *Module) string {
 	for _, p := range m.Properties {
 		if p.Name == "name" && p.Value.Type() == StringType {
 			s := p.Value.(*String)
-			if IsValidNixIdentifier(s.Value) {
-				return s.Value
+
+			// We can't assign directly to this name in a let block
+			// since it would refer to itself. Just add a prefix
+			// inside the let block.
+			name := s.Value
+			if name == m.Type {
+				name = "_bp2nix_" + name
+			}
+
+			if IsValidNixIdentifier(name) {
+				return name
 			} else {
-				return "\"" + s.Value + "\""
+				return "\"" + name + "\""
 			}
 		}
 	}
@@ -137,11 +146,26 @@ func (p *printer) printHeader() {
 func (p *printer) printFooter() {
 	moduleNames := GetModulesInfo(p.defs, ModuleName)
 	var footer string
+	footer = "\nin {"
+
 	if len(moduleNames) > 0 {
-		footer = "\nin { inherit " + strings.Join(moduleNames, " ") + "; }\n"
-	} else {
-		footer = "\nin { }\n"
+		footer += " inherit"
+		for _, moduleName := range moduleNames {
+			if !strings.HasPrefix(moduleName, "_bp2nix_") {
+				footer += " " + moduleName
+			}
+		}
+		footer += ";"
+
+		for _, moduleName := range moduleNames {
+			if strings.HasPrefix(moduleName, "_bp2nix_") {
+				footer += " " + moduleName[len("_bp2nix_"):] + " = " + moduleName + ";"
+			}
+		}
 	}
+
+	footer += " }\n"
+
 	p.output = append(p.output, footer...)
 }
 

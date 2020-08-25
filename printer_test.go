@@ -455,6 +455,23 @@ _missingName = test { #  test
 in { inherit _missingName; }
 `,
 	},
+	{ // bp2nix
+		input: `
+test {
+    name: "test"
+}
+`,
+		output: `
+{ test }:
+let
+
+_bp2nix_test = test {
+    name = "test";
+};
+
+in { inherit; test = _bp2nix_test; }
+`,
+	},
 }
 
 func TestPrinter(t *testing.T) {
